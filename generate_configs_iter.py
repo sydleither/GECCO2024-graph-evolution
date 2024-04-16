@@ -48,19 +48,18 @@ def generate_scripts(exp_dir, config_names, save_dir):
         #generate bash script to run all the configs on the hpcc
         with open(f"experiments/run_experiments_hpcc{i}", "w") as f:
             f.write("cd {}\n".format(save_dir))
-            f.write("cp {}/main.py .\n".format(cwd)+
-                    "cp {}/ga.py .\n".format(cwd)+
-                    "cp {}/eval_functions.py .\n".format(cwd)+
-                    "cp {}/organism.py .\n".format(cwd)+
-                    "cp {}/bintools.py .\n".format(cwd)+
-                    "cp {}/plot_utils.py .\n".format(cwd))
+            f.write("cp {}/main.py .\n".format(cwd+"/graph-evolution")+
+                    "cp {}/ga.py .\n".format(cwd+"/graph-evolution")+
+                    "cp {}/eval_functions.py .\n".format(cwd+"/graph-evolution")+
+                    "cp {}/organism.py .\n".format(cwd+"/graph-evolution")+
+                    "cp {}/bintools.py .\n".format(cwd+"/graph-evolution")+
+                    "cp {}/plot_utils.py .\n".format(cwd+"/graph-evolution"))
             for config_name in chunk:
                 f.write("sbatch {}/experiments/hpcc.sb {}.json\n".format(cwd, config_name))
         #generate bash script to analyze the runs when they are all done
         with open(f"experiments/analyze_experiments{i}", "w") as f:
-            f.write("cd {}\n")
             for config_name in chunk:
-                f.write("python3 replicate_analysis.py {}/{}/{}\n".format(save_dir, exp_dir, config_name))
+                f.write("python3 graph-evolution/replicate_analysis.py {}/{}/{}\n".format(save_dir, exp_dir, config_name))
 
 
 def iteration_experiment(exp_dir):
@@ -108,7 +107,7 @@ def iteration_experiment(exp_dir):
 def main(save_dir):
     if not os.path.exists("experiments/configs"):
         os.makedirs("experiments/configs")
-    experiment_name = "iter3"
+    experiment_name = "iter_final"
     config_names = iteration_experiment(experiment_name)
     print(len(config_names))
     generate_scripts(experiment_name, config_names, save_dir)

@@ -11,11 +11,11 @@
 #SBATCH -o ga_%A.out
 
 ## Time requirement in format "days-hours:minutes"
-#SBATCH --time=3-0:00
+#SBATCH --time=3-00:00
 
 ## Memory requirement in megabytes. You might need to make this bigger.
 #SBATCH --mem-per-cpu=2gb
 
 #SBATCH --array=0-9
 
-python3 main.py /mnt/home/leithers/graph_evolution/graph-evolution/experiments/configs/${1} ${SLURM_ARRAY_TASK_ID} > outfile.txt
+python3 main.py /mnt/home/leithers/graph_evolution/GECCO2024-graph-evolution/experiments/configs/${1} ${SLURM_ARRAY_TASK_ID} > outfile.txt

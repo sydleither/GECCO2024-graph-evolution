@@ -13,6 +13,7 @@ import seaborn as sns
 import matplotlib
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
+sns.set_palette(sns.color_palette(["#f4a9b5", "#d68c45", "#4c956c"]))
 
 sys.path.insert(0, "{}/graph-evolution".format(os.getcwd()))
 from organism import Organism
@@ -208,21 +209,18 @@ def save_five_obj_boxplots():
 def set_comparison_figure():
     matplotlib.rcParams.update({'font.size': 11})
     df = pd.read_pickle("experiments/df.pkl")
-    #df = df[df["MSE"] > 0]
-    #df["MSE"] = np.log(df["MSE"])
-    #df["MSE"] = df["MSE"].fillna(0)
     figure, axis = plt.subplots(1, 3, figsize=(16,5))
     col = 0
     for g in sorted(df["iter_path"].unique()):
-        x = sns.boxplot(data=df.loc[df["iter_path"] == g], x="objective", y="MSE", ax=axis[col])
+        x = sns.barplot(data=df.loc[df["iter_path"] == g], x="objective", y="MSE", hue="network_size", ax=axis[col], errorbar="ci")
         x.set(ylabel="Error")
-        #axis[col].set_yscale("log")
-        axis[col].set_yscale('symlog', linthresh=np.min(df.loc[(df["iter_path"] == g) & (df["MSE"] > 0)]["MSE"]))
-        axis[col].set_ylim(-np.min(df.loc[(df["iter_path"] == g) & (df["MSE"] > 0)]["MSE"]), np.max(df.loc[df["iter_path"] == g]["MSE"])+np.min(df.loc[(df["iter_path"] == g) & (df["MSE"] > 0)]["MSE"]))
+        axis[col].set_yscale("log")
+        axis[col].set_ylim(1e-10, 1e4)
         axis[col].set_title("Set {}".format(int(g)+1))
+        sns.move_legend(axis[col], "upper left")
         col += 1
     figure.tight_layout(rect=[0, 0.03, 1, 0.95])
-    figure.suptitle("Performance Over All Experiments For Each Set")
+    figure.suptitle("Error of Experiments Within Each Set")
     plt.savefig("set_performance.png")
     plt.close()
 
@@ -234,12 +232,12 @@ def degree_dist_section_data():
     num_obj = "4"
 
     df1 = df.loc[(df["iter_path"] == iter_path) & (df["network_size"] == network_size) & (df["num_obj"] == num_obj)]
-    df1 = df1.loc[(df["objective"] == "in_degree_distribution") | (df["objective"] == "out_degree_distribution")]
+    df1 = df1.loc[(df["objective"] == "in-dd") | (df["objective"] == "out-dd")]
     print(df1[["iter_path", "combo", "num_obj", "objective", "MSE"]].groupby(["iter_path", "num_obj", "combo", "objective"]).mean())
     print(np.mean(df1["MSE"].values))
 
     df1 = df.loc[(df["iter_path"] == iter_path)]
-    dd_combos = set(df1.loc[(df1["objective"] == "in_degree_distribution") | (df1["objective"] == "out_degree_distribution")]["experiment_name"].values)
+    dd_combos = set(df1.loc[(df1["objective"] == "in-dd") | (df1["objective"] == "out-dd")]["experiment_name"].values)
     df3 = df1[~df1.experiment_name.isin(dd_combos)]
     print("no DD: ", np.mean(df3["MSE"].values))
     df2 = df1[df1.experiment_name.isin(dd_combos)]
@@ -293,7 +291,7 @@ def final_figures():
     df["num_obj"] = df["num_obj"].apply(pd.to_numeric)
 
     dd_combos = set(df.loc[(df["objective"] == "in-dd") | (df["objective"] == "out-dd")]["experiment_name"].values)
-    df1 = df#[~df.experiment_name.isin(dd_combos)]
+    df1 = df[~df.experiment_name.isin(dd_combos)]
     min_val = np.min(df1[(df1["MSE"] > 0)]["MSE"])
     max_val = np.max(df1[(df1["MSE"] > 0)]["MSE"])
     figure, axis = plt.subplots(1, 1, figsize=(6,5))
@@ -307,8 +305,6 @@ def final_figures():
     plt.savefig("idk.png")
     plt.close()
 
-    #dd_combos = set(df.loc[(df["objective"] == "in-dd") | (df["objective"] == "out-dd")]["experiment_name"].values)
-    #df1 = df[df.experiment_name.isin(dd_combos)]
     df1 = df.loc[(df["objective"] == "in-dd") | (df["objective"] == "out-dd")]
     min_val = np.min(df1[(df1["MSE"] > 0)]["MSE"])
     max_val = np.max(df1[(df1["MSE"] > 0)]["MSE"])
@@ -327,8 +323,8 @@ def final_figures():
 def entropy_data():
     which_set = 2
 
-    topological = ["strong_components", "proportion_of_self_loops", "connectance"]
-    weight = ["prop_comp_pair", "avg_pos_edge_weight", "avg_neg_edge_weight", "pos_edge_proportion"]
+    topological = ["str comp", "prop self", "connectance"]
+    weight = ["recip neg", "avg pos", "avg neg", "pos prop"]
 
     df = pd.read_pickle("experiments/df_entropy.pkl")
     df["uniformity"] = df["entropy"] / np.log2(df["num_unique"])
@@ -347,7 +343,7 @@ def entropy_data():
         df0 = df_perf.loc[(df_perf["iter_path"] == "0")]
         invalid = set(df0[df0.objective.isin(weight) & (df0["under_selection"] == True)]["experiment_name"].values)
         df0 = df0[~df0.experiment_name.isin(invalid)]
-        df0 = df0.loc[(df0["under_selection"] == False) & (df0["objective"] == "avg_pos_edge_weight")]
+        df0 = df0.loc[(df0["under_selection"] == False) & (df0["objective"] == "avg pos")]
     else:
         df0 = df_perf.loc[(df_perf["iter_path"] == "2")]
         invalid = set(df0[df0.objective.isin(topological) & (df0["under_selection"] == True)]["experiment_name"].values)
@@ -381,6 +377,67 @@ def generate_dist_plots():
     plt.close()
 
 
+def poster_error():
+    df = pd.read_pickle("experiments/df.pkl")
+    matplotlib.rcParams.update({"font.size": 20})
+    df["num_obj"] = df["num_obj"].apply(pd.to_numeric)
+
+    figure, axis = plt.subplots(1, 1, figsize=(10,10), dpi=150)
+    x = sns.barplot(data=df, x="num_obj", y="MSE", hue="network_size", ax=axis, errorbar="ci", palette="Greens_d")
+    x.legend(framealpha=0.33, title="Graph Size")
+    axis.set_yscale('log')
+    x.set(xlabel="Number of Constrained Properties")
+    x.set(ylabel="Error")
+    figure.tight_layout(rect=[0, 0.03, 1, 0.95])
+    figure.suptitle("Error of Experiments")
+    plt.savefig("poster.png", transparent=True)
+    plt.close()
+
+
+def poster_diversity():
+    topological = ["str comp", "prop self", "connectance"]
+    weight = ["recip neg", "avg pos", "avg neg", "pos prop"]
+
+    df = pd.read_pickle("experiments/df_entropy.pkl")
+    df["uniformity"] = df["entropy"] / np.log2(df["num_unique"])
+    df["uniformity"] = df["uniformity"].fillna(0)
+    df["spread"] = df["num_unique"] / df["pop_size"]
+
+    perfect_runs = []
+    for experiment_name in df["experiment_name"].unique():
+        num_scores = df.loc[(df["experiment_name"] == experiment_name) & (df["under_selection"] == True)]
+        perfect = df.loc[(df["experiment_name"] == experiment_name) & (df["under_selection"] == True) & (df["mse"] == 0)]
+        if len(perfect) == len(num_scores):
+            perfect_runs.append(experiment_name)
+    df_perf = df[df.experiment_name.isin(perfect_runs)]
+
+    df_t = df_perf.loc[(df_perf["iter_path"] == "0")]
+    invalid = set(df_t[df_t.objective.isin(weight) & (df_t["under_selection"] == True)]["experiment_name"].values)
+    df_t = df_t[~df_t.experiment_name.isin(invalid)]
+    df_t = df_t.loc[(df_t["under_selection"] == False) & (df_t["objective"] == "avg pos")]
+    df_t["div_group"] = "Topological"
+
+    df_e = df_perf.loc[(df_perf["iter_path"] == "2")]
+    invalid = set(df_e[df_e.objective.isin(topological) & (df_e["under_selection"] == True)]["experiment_name"].values)
+    df_e = df_e[~df_e.experiment_name.isin(invalid)]
+    df_e = df_e.loc[(df_e["under_selection"] == False) & (df_e["objective"] == "connectance")]
+    df_e["div_group"] = "Edge-Weight"
+
+    df_div = pd.concat([df_e, df_t])
+
+    diversity_measure = "spread"
+    matplotlib.rcParams.update({"font.size": 20})
+    figure, axis = plt.subplots(1, 1, figsize=(10,5), dpi=150)
+    x = sns.barplot(data=df_div, x="div_group", y=diversity_measure, hue="network_size", ax=axis, errorbar="ci", palette="Greens_d")
+    x.legend(framealpha=0.33, title="Graph Size")
+    x.set(xlabel="Type of Constrained Properties")
+    x.set(ylabel=diversity_measure)
+    figure.tight_layout(rect=[0, 0.03, 1, 0.95])
+    figure.suptitle("Diversity of Experiments")
+    plt.savefig(f"{diversity_measure}.png", transparent=True)
+    plt.close()
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 3:
         if sys.argv[-1] == "save":
@@ -402,6 +459,10 @@ if __name__ == "__main__":
             set_comparison_figure()
         elif sys.argv[-1] == "entropy":
             entropy_data()
+        elif sys.argv[-1] == "poster1":
+            poster_error()
+        elif sys.argv[-1] == "poster2":
+            poster_diversity()
         else:
             print("Please give a valid function to run.")
     else:
